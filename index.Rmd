@@ -1,7 +1,31 @@
 ---
-title: "Food_Safty_A"
+title: "Food Safty Analysis of Subway and its two largest competitors Jimmy Johns and Quiznos"
 author: "Ethan McGregor"
 output:
   html_document: default
   pdf_document: default
 ---
+
+
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+
+library('plotly')
+library('dplyr')
+library('jsonlite')
+library('httr')
+library('stringr')
+require('knitr')
+
+#import data from data.gov
+data <- data.frame(read.csv("Food_inspection.csv"))
+
+```
+
+```{r setp, echo=FALSE, message=FALSE, warning=FALSE}
+
+jimmy <- (data %>% filter(str_detect(Name,"JIMMY")))
+
+subway <- (data %>% filter(str_detect(Name,"SUBWAY")))
+                          
+quiznos <- (data %>% filter(str_detect(Name,"QUIZ")))
+```
