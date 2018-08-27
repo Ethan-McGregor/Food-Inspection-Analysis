@@ -1,5 +1,5 @@
 ---
-title: "Food Safty Analysis of Subway and its two largest competitors Jimmy Johns and Quiznos"
+title: "Food Safety Analysis of Subway and it's Two Largest Competitors Jimmy Johns and Quiznos"
 author: "Ethan McGregor"
 output:
   html_document: default
@@ -21,7 +21,9 @@ data <- data.frame(read.csv("Food_inspection.csv"))
 
 ```
 
-```{r setp, echo=FALSE, message=FALSE, warning=FALSE}
+```{r var, echo=FALSE, message=FALSE, warning=FALSE}
+#Filtering our data down to thethree compnaies we are looking at
+#Data is not consistant so we have to partial names
 
 jimmy <- (data %>% filter(str_detect(Name,"JIMMY")))
 
@@ -29,3 +31,33 @@ subway <- (data %>% filter(str_detect(Name,"SUBWAY")))
                           
 quiznos <- (data %>% filter(str_detect(Name,"QUIZ")))
 ```
+
+Subway is the largest sandwich company with `r count(select(subway,Name))` locations with Jimmy Johns trailing behind with only `r count(select(jimmy,Name))` and Quiznos with `r count(select(quiznos,Name))`
+
+```{r map, echo=FALSE, message=FALSE, warning=FALSE}
+
+subway$a <- ifelse(subway$Inspection.Results == "No Critical Violations Noted",0,1)
+
+library('leaflet')
+
+## new var to use when hover mouse over map shows sum of data
+subway$hover <- with(subway, paste("City: ", City, ", Inspection Results: ", Inspection.Results, "Lat: ", Latitude, "long", Longitude))
+
+## creates interactive map
+pal <- colorFactor(c("Blue","Red"),
+  domain = 0:1)
+
+m <- leaflet(data = subway) %>%
+  addTiles() %>% 
+  addCircleMarkers(~Longitude, ~Latitude, color = ~pal(a),
+
+label = ~hover)
+
+
+```
+
+#Subway locations and Inspection status
+RED = Violation Corrected 
+BLUE = No critical Violations
+Hover for more information
+`r m`
