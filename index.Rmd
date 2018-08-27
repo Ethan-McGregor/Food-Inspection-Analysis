@@ -1,0 +1,7 @@
+---
+title: "Food_Safty_A"
+author: "Ethan McGregor"
+output:
+  html_document: default
+  pdf_document: default
+---
