@@ -1,5 +1,6 @@
 ---
-title: "Food Safety Analysis of Subway and it's Two Largest Competitors Jimmy Johns and Quiznos"
+title: Food Safety Analysis of Subway and it's Two Largest Competitors (Jimmy Johns
+  and Quiznos)
 author: "Ethan McGregor"
 output:
   html_document: default
@@ -11,8 +12,6 @@ output:
 
 library('plotly')
 library('dplyr')
-library('jsonlite')
-library('httr')
 library('stringr')
 require('knitr')
 
@@ -21,9 +20,9 @@ data <- data.frame(read.csv("Food_inspection.csv"))
 
 ```
 
-```{r var, echo=FALSE, message=FALSE, warning=FALSE}
-#Filtering our data down to thethree compnaies we are looking at
-#Data is not consistant so we have to partial names
+```{r get_each_company_data, echo=FALSE, message=FALSE, warning=FALSE}
+#Filtering our data down to the three compnaies we are looking at
+#Data (Name)is not consistant so we have to partial filter by names
 
 jimmy <- (data %>% filter(str_detect(Name,"JIMMY")))
 
@@ -31,19 +30,15 @@ subway <- (data %>% filter(str_detect(Name,"SUBWAY")))
                           
 quiznos <- (data %>% filter(str_detect(Name,"QUIZ")))
 
-#grp <- summarise(group_by(subway, Location), Score = mean(a, na.rm = TRUE))
-#grpS <- summarise(group_by(subway, Location), Score = mean(Zip, na.rm = TRUE))
-#test <- left_join(grp,grpS)
-
 ```
 
-Subway is the largest sandwich company with `r length(unique(subway$Location))` locations with Jimmy Johns trailing behind with only `r length(unique(jimmy$Location))` and Quiznos with `r length(unique(quiznos$Location))`
+Subway is the largest sandwich company with `r length(unique(subway$Location))` locations with Jimmy Johns trailing behind with `r length(unique(jimmy$Location))` and Quiznos with only `r length(unique(quiznos$Location))`
 
-```{r map, echo=FALSE, message=FALSE, warning=FALSE}
+```{r Subway_Map, echo=FALSE, message=FALSE, warning=FALSE}
 
-subway$a <- ifelse(subway$Inspection.Results == "No Critical Violations Noted",0,1)
-quiznos$a <- ifelse(quiznos$Inspection.Results == "No Critical Violations Noted",0,1)
-jimmy$a <- ifelse(jimmy$Inspection.Results == "No Critical Violations Noted",0,1)
+subway$binary_inspection_results <- ifelse(subway$Inspection.Results == "No Critical Violations Noted",0,1)
+quiznos$binary_inspection_results <- ifelse(quiznos$Inspection.Results == "No Critical Violations Noted",0,1)
+jimmy$binary_inspection_results <- ifelse(jimmy$Inspection.Results == "No Critical Violations Noted",0,1)
 library('leaflet')
 
 ## new var to use when hover mouse over map shows sum of data
@@ -55,7 +50,7 @@ pal <- colorFactor(c("Blue","Red"),
 
 m <- leaflet(data = subway) %>%
   addTiles() %>% 
-  addCircleMarkers(~Longitude, ~Latitude, color = ~pal(a),
+  addCircleMarkers(~Longitude, ~Latitude, color = ~pal(binary_inspection_results),
 
 label = ~hover)
 
@@ -86,20 +81,39 @@ label = ~hover)
 
 ```{r groupedBarChart , echo=FALSE, message=FALSE, warning=FALSE}
 
-jimmyScore <- summarise(group_by(jimmy, Zip), JScore = mean(a, na.rm = TRUE))
-quiznosScore <- summarise(group_by(quiznos, Zip), QScore = mean(a, na.rm = TRUE))
-subwayScore <- summarise(group_by(subway, Zip), SScore = mean(a, na.rm = TRUE))
+jimmyScore <- summarise(group_by(jimmy, Zip), JScore = mean(binary_inspection_results, na.rm = TRUE))
+quiznosScore <- summarise(group_by(quiznos, Zip), QScore = mean(binary_inspection_results, na.rm = TRUE))
+subwayScore <- summarise(group_by(subway, Zip), SScore = mean(binary_inspection_results, na.rm = TRUE))
 
 twoCombinedScores <-right_join(jimmyScore, subwayScore)
 allCombinedScores <- left_join(twoCombinedScores,quiznosScore)
 
-a <- plot_ly(allCombinedScores, x = factor(allCombinedScores$Zip), y = ~JScore, type = 'bar', name = 'Jimmy Johns') %>%
+groupedGraph <- plot_ly(allCombinedScores, x = factor(allCombinedScores$Zip), y = ~JScore, type = 'bar', name = 'Jimmy Johns') %>%
   add_trace(y = ~SScore, name = 'Subway') %>% 
   add_trace(y= ~QScore, name = 'Quiznos') %>%
-  layout(yaxis = list(title = 'Count'), barmode = 'group')
+  layout(yaxis = list(title = 'Count'), barmode = 'group')%>% 
+    layout(xaxis = list(tickangle = 45))
 
 
 ```
-`r a`
+`r groupedGraph`
+
+  While Subway has many more locations than Quiznos or Jimmy Johns we can see that their scores are not abnormal from their competitors. While we can see there are a few areas specifically 20853 and that have a high amount of problems, we can use that knowledge to target food saftey training in that area.
+  
+```{r paceholder, echo=FALSE, message=FALSE, warning=FALSE}
+m <- count(group_by(subway, Inspection.Type)) %>% filter(Inspection.Type %in% c("Complaint Invest w/Comprehensive","Comprehensive","Food Complaint","Monitoring","Monitoring w/Complaint Investigation"))
+
+inspectionReasonPieChart <- plot_ly(m, labels = ~Inspection.Type, values = ~n, type = 'pie') %>%
+  layout(title = 'Reasons for Inspections (Subway)',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+
+
+```
+
+`r inspectionReasonPieChart`
+
+The vast majority of Inspections at Subway have been routine, either monitoring or Comprehensive. Less then 3 percent of all inspections have been because of a complaint. 
 
 
