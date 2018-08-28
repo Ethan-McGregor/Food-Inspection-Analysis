@@ -30,14 +30,20 @@ jimmy <- (data %>% filter(str_detect(Name,"JIMMY")))
 subway <- (data %>% filter(str_detect(Name,"SUBWAY")))
                           
 quiznos <- (data %>% filter(str_detect(Name,"QUIZ")))
+
+#grp <- summarise(group_by(subway, Location), Score = mean(a, na.rm = TRUE))
+#grpS <- summarise(group_by(subway, Location), Score = mean(Zip, na.rm = TRUE))
+#test <- left_join(grp,grpS)
+
 ```
 
-Subway is the largest sandwich company with `r count(select(subway,Name))` locations with Jimmy Johns trailing behind with only `r count(select(jimmy,Name))` and Quiznos with `r count(select(quiznos,Name))`
+Subway is the largest sandwich company with `r length(unique(subway$Location))` locations with Jimmy Johns trailing behind with only `r length(unique(jimmy$Location))` and Quiznos with `r length(unique(quiznos$Location))`
 
 ```{r map, echo=FALSE, message=FALSE, warning=FALSE}
 
 subway$a <- ifelse(subway$Inspection.Results == "No Critical Violations Noted",0,1)
-
+quiznos$a <- ifelse(quiznos$Inspection.Results == "No Critical Violations Noted",0,1)
+jimmy$a <- ifelse(jimmy$Inspection.Results == "No Critical Violations Noted",0,1)
 library('leaflet')
 
 ## new var to use when hover mouse over map shows sum of data
@@ -57,7 +63,43 @@ label = ~hover)
 ```
 
 #Subway locations and Inspection status
-RED = Violation Corrected 
-BLUE = No critical Violations
-Hover for more information
++ RED = Violation Corrected
++ BLUE = No critical Violations
++ Darker the color = more inspections
++ Hover for more information
 `r m`
+
+
+##Health Code Violation Index Score
+###(By Zipcode)
+####Higher the number (0-1) means more violations in that zipcode
+```{r subwaybarChart, echo=FALSE, message=FALSE, warning=FALSE}
+
+#p <- plot_ly(
+#  x = factor(subwayScore$Zip),
+ # y = subwayScore$SScore,
+ # name = "Rating by Zipcode",
+ # type = "bar"
+#)
+```
+
+
+```{r groupedBarChart , echo=FALSE, message=FALSE, warning=FALSE}
+
+jimmyScore <- summarise(group_by(jimmy, Zip), JScore = mean(a, na.rm = TRUE))
+quiznosScore <- summarise(group_by(quiznos, Zip), QScore = mean(a, na.rm = TRUE))
+subwayScore <- summarise(group_by(subway, Zip), SScore = mean(a, na.rm = TRUE))
+
+twoCombinedScores <-right_join(jimmyScore, subwayScore)
+allCombinedScores <- left_join(twoCombinedScores,quiznosScore)
+
+a <- plot_ly(allCombinedScores, x = factor(allCombinedScores$Zip), y = ~JScore, type = 'bar', name = 'Jimmy Johns') %>%
+  add_trace(y = ~SScore, name = 'Subway') %>% 
+  add_trace(y= ~QScore, name = 'Quiznos') %>%
+  layout(yaxis = list(title = 'Count'), barmode = 'group')
+
+
+```
+`r a`
+
+
