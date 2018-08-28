@@ -1,6 +1,6 @@
 ---
 title: Food Safety Analysis of Subway and it's Two Largest Competitors (Jimmy Johns
-  and Quiznos)
+  and Quiznos) In the state of Maryland
 author: "Ethan McGregor"
 output:
   html_document: default
@@ -13,16 +13,17 @@ output:
 library('plotly')
 library('dplyr')
 library('stringr')
+library('leaflet')
 require('knitr')
 
-#import data from data.gov
+# import data from data.gov
 data <- data.frame(read.csv("Food_inspection.csv"))
 
 ```
 
 ```{r get_each_company_data, echo=FALSE, message=FALSE, warning=FALSE}
-#Filtering our data down to the three compnaies we are looking at
-#Data (Name)is not consistant so we have to partial filter by names
+# Filtering our data down to the three compnaies we are looking at
+# Data (Name)is not consistant so we have to partial filter by names
 
 jimmy <- (data %>% filter(str_detect(Name,"JIMMY")))
 
@@ -32,19 +33,21 @@ quiznos <- (data %>% filter(str_detect(Name,"QUIZ")))
 
 ```
 
-Subway is the largest sandwich company with `r length(unique(subway$Location))` locations with Jimmy Johns trailing behind with `r length(unique(jimmy$Location))` and Quiznos with only `r length(unique(quiznos$Location))`
+
+
+Subway is the largest sandwich company in Maryland with `r length(unique(subway$Location))` locations with Jimmy Johns trailing behind with `r length(unique(jimmy$Location))` and Quiznos with only `r length(unique(quiznos$Location))`
 
 ```{r Subway_Map, echo=FALSE, message=FALSE, warning=FALSE}
 
+# changes inspection results to a binary 0 or 1 with 0 being no critical violations
 subway$binary_inspection_results <- ifelse(subway$Inspection.Results == "No Critical Violations Noted",0,1)
 quiznos$binary_inspection_results <- ifelse(quiznos$Inspection.Results == "No Critical Violations Noted",0,1)
 jimmy$binary_inspection_results <- ifelse(jimmy$Inspection.Results == "No Critical Violations Noted",0,1)
-library('leaflet')
 
-## new var to use when hover mouse over map shows sum of data
+# new var to use when hover mouse over map shows sum of data
 subway$hover <- with(subway, paste("City: ", City, ", Inspection Results: ", Inspection.Results, "Lat: ", Latitude, "long", Longitude))
 
-## creates interactive map
+# creates interactive map
 pal <- colorFactor(c("Blue","Red"),
   domain = 0:1)
 
@@ -67,9 +70,9 @@ label = ~hover)
 
 ##Health Code Violation Index Score
 ###(By Zipcode)
-####Higher the number (0-1) means more violations in that zipcode
+####Higher the number (0-1) means more of their inspections resulted in a violation in that zipcode
 ```{r subwaybarChart, echo=FALSE, message=FALSE, warning=FALSE}
-
+# original bar chart for subway but moved to new grouped chart
 #p <- plot_ly(
 #  x = factor(subwayScore$Zip),
  # y = subwayScore$SScore,
@@ -81,10 +84,13 @@ label = ~hover)
 
 ```{r groupedBarChart , echo=FALSE, message=FALSE, warning=FALSE}
 
+# adds a score column which is the mean of the binary violations, if a higher number (closer to 1) is found more of their
+# inspections resulted in a violation
 jimmyScore <- summarise(group_by(jimmy, Zip), JScore = mean(binary_inspection_results, na.rm = TRUE))
 quiznosScore <- summarise(group_by(quiznos, Zip), QScore = mean(binary_inspection_results, na.rm = TRUE))
 subwayScore <- summarise(group_by(subway, Zip), SScore = mean(binary_inspection_results, na.rm = TRUE))
 
+# joins scores into new dataframe for use in the chart
 twoCombinedScores <-right_join(jimmyScore, subwayScore)
 allCombinedScores <- left_join(twoCombinedScores,quiznosScore)
 
@@ -100,10 +106,11 @@ groupedGraph <- plot_ly(allCombinedScores, x = factor(allCombinedScores$Zip), y 
 
   While Subway has many more locations than Quiznos or Jimmy Johns we can see that their scores are not abnormal from their competitors. While we can see there are a few areas specifically 20853 and that have a high amount of problems, we can use that knowledge to target food saftey training in that area.
   
-```{r paceholder, echo=FALSE, message=FALSE, warning=FALSE}
-m <- count(group_by(subway, Inspection.Type)) %>% filter(Inspection.Type %in% c("Complaint Invest w/Comprehensive","Comprehensive","Food Complaint","Monitoring","Monitoring w/Complaint Investigation"))
+```{r pieChart, echo=FALSE, message=FALSE, warning=FALSE}
 
-inspectionReasonPieChart <- plot_ly(m, labels = ~Inspection.Type, values = ~n, type = 'pie') %>%
+inspectionTypeCounts <- count(group_by(subway, Inspection.Type)) %>% filter(Inspection.Type %in% c("Complaint Invest w/Comprehensive","Comprehensive","Food Complaint","Monitoring","Monitoring w/Complaint Investigation"))
+
+inspectionReasonPieChart <- plot_ly(inspectionTypeCounts, labels = ~Inspection.Type, values = ~n, type = 'pie') %>%
   layout(title = 'Reasons for Inspections (Subway)',
          xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
